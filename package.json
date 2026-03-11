@@ -21,7 +21,7 @@
     "dist"
   ],
   "dependencies": {
-    "@anuma/sdk": "link:/Users/fadeev/github.com/anuma-ai/sdk",
+    "@anuma/sdk": "1.0.0-next.20260311124613",
     "@inquirer/search": "^4.1.4",
     "chalk": "^5.6.2",
     "commander": "^14.0.3",
