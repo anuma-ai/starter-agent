@@ -36,7 +36,7 @@ jobs:
         run: pnpm install
 
       - name: Generate docs
-        run: pnpm docs
+        run: pnpm generate
 
       - name: Check if docs changed
         id: changes
@@ -47,8 +47,8 @@ jobs:
       - name: Fail if docs changed
         if: steps.changes.outputs.docs_changed == 'true'
         run: |
-          echo "❌ Changes detected in docs/ after running 'pnpm docs'"
-          echo "Please run 'pnpm docs' locally and commit the changes."
+          echo "❌ Changes detected in docs/ after running 'pnpm generate'"
+          echo "Please run 'pnpm generate' locally and commit the changes."
           echo ""
           echo "Changed files:"
           git status docs/
