@@ -10,7 +10,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
-    "docs": "node scripts/generate-docs.mjs"
+    "generate": "node scripts/generate-docs.mjs"
   },
   "packageManager": "pnpm@10.23.0",
   "type": "module",
