@@ -1,3 +1,4 @@
+// #region login
 import { Command } from "commander";
 import chalk from "chalk";
 import { setApiKey } from "../config.js";
@@ -9,3 +10,4 @@ export const login = new Command("login")
     setApiKey(opts.apiKey);
     console.log(chalk.green("API key saved."));
   });
+// #endregion login

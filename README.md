@@ -8,7 +8,7 @@ An interactive CLI chat agent built with the [Anuma SDK](https://github.com/anum
 pnpm install
 ```
 
-Save your API key:
+Sign in at [dashboard.anuma.ai](https://dashboard.anuma.ai/) and create an app to get your API key. Then save it:
 
 ```bash
 pnpm agent login --api-key <your-key>
