@@ -1,3 +1,4 @@
+// #region config
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
@@ -39,3 +40,4 @@ export function getApiUrl(): string {
   const config = readConfig();
   return config.apiUrl ?? DEFAULT_BASE_URL;
 }
+// #endregion config

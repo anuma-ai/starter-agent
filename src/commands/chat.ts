@@ -17,6 +17,7 @@ function sdkHeaders(apiKey: string) {
   return { "X-API-Key": apiKey };
 }
 
+// #region fetchModels
 async function fetchModelIds(baseUrl: string): Promise<string[]> {
   const apiKey = getApiKey();
 
@@ -31,7 +32,9 @@ async function fetchModelIds(baseUrl: string): Promise<string[]> {
   if (!Array.isArray(models)) return [];
   return models.map((m: any) => m.id ?? m.name).filter(Boolean);
 }
+// #endregion fetchModels
 
+// #region pickModel
 async function pickModel(current: string, baseUrl: string): Promise<string> {
   const spinner = ora({ text: "Loading models…", color: "cyan" }).start();
   let modelIds: string[];
@@ -61,7 +64,9 @@ async function pickModel(current: string, baseUrl: string): Promise<string> {
 
   return selected;
 }
+// #endregion pickModel
 
+// #region chatCommand
 export const chat = new Command("chat")
   .description("Start an interactive chat session")
   .option("--api-url <url>", "API base URL")
@@ -135,6 +140,7 @@ export const chat = new Command("chat")
       let firstToken = true;
 
       try {
+        // #region runToolLoop
         const result = await runToolLoop({
           messages,
           model,
@@ -155,6 +161,7 @@ export const chat = new Command("chat")
             console.error(chalk.red(`Error: ${err.message}`));
           },
         });
+        // #endregion runToolLoop
 
         if (firstToken) spinner.stop();
 
@@ -187,3 +194,4 @@ export const chat = new Command("chat")
       }
     }
   });
+// #endregion chatCommand

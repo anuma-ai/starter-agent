@@ -1,3 +1,4 @@
+// #region listFilesTool
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { ToolConfig } from "@anuma/sdk/server";
@@ -18,6 +19,7 @@ export const listFiles: ToolConfig = {
       },
     },
   },
+  // #region executor
   executor: async ({ path }) => {
     const dir = String(path || ".");
     try {
@@ -38,4 +40,6 @@ export const listFiles: ToolConfig = {
       return { error: err.message };
     }
   },
+  // #endregion executor
 };
+// #endregion listFilesTool

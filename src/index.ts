@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+// #region entrypoint
 import { Command } from "commander";
 import { login } from "./commands/login.js";
 import { chat } from "./commands/chat.js";
@@ -15,3 +16,4 @@ program.addCommand(login);
 program.addCommand(chat);
 
 program.parse();
+// #endregion entrypoint
