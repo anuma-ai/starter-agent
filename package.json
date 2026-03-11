@@ -1,0 +1,37 @@
+{
+  "name": "@anuma/starter-agent",
+  "version": "0.1.0",
+  "description": "Anuma starter agent - interactive chat CLI",
+  "bin": {
+    "anuma-agent": "./dist/index.js"
+  },
+  "scripts": {
+    "agent": "tsx src/index.ts",
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "packageManager": "pnpm@10.23.0",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js",
+    "./commands/chat": "./dist/commands/chat.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@anuma/sdk": "link:/Users/fadeev/github.com/anuma-ai/sdk",
+    "@inquirer/search": "^4.1.4",
+    "chalk": "^5.6.2",
+    "commander": "^14.0.3",
+    "marked": "^17.0.4",
+    "marked-terminal": "^7.3.0",
+    "ora": "^9.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.5",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
