@@ -2,13 +2,24 @@
 
 An interactive CLI chat agent built with the [Anuma SDK](https://github.com/anuma-ai/sdk). Supports streaming responses, model switching, and client-side tool execution via the SDK's `runToolLoop`.
 
-## Setup
+## Getting Started
+
+### Create an Anuma app
+
+Sign in at [dashboard.anuma.ai](https://dashboard.anuma.ai/) and create an app.
+This provisions the API account that powers AI responses.
+
+### Clone and install
 
 ```bash
+git clone https://github.com/anuma-ai/starter-agent.git
+cd starter-agent
 pnpm install
 ```
 
-Sign in at [dashboard.anuma.ai](https://dashboard.anuma.ai/) and create an app to get your API key. Then save it:
+### Save your API key
+
+Copy the API key from the dashboard and save it:
 
 ```bash
 pnpm agent login --api-key <your-key>
