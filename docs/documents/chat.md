@@ -31,7 +31,7 @@ Each user message goes through `runToolLoop`, which manages streaming and multi-
         });
 ```
 
-[src/commands/chat.ts](https://github.com/anuma-ai/starter-agent/blob/main/src/commands/chat.ts#L323-L344)
+[src/commands/chat.ts](https://github.com/anuma-ai/starter-agent/blob/main/src/commands/chat.ts#L326-L347)
 
 The key options:
 
@@ -124,6 +124,9 @@ export const chat = new Command("chat")
         if (picked?.action === "resume") {
           conversationId = picked.conversation.conversationId;
           messages.length = 0;
+          if (opts.system) {
+            messages.push({ role: "system", content: [{ type: "text", text: opts.system }] });
+          }
           const restored = await loadConversation(conversationId);
           messages.push(...restored);
           console.log(chalk.dim(`Switched to "${picked.conversation.title}" (${restored.length} messages)\n`));
@@ -276,7 +279,7 @@ export const chat = new Command("chat")
   });
 ```
 
-[src/commands/chat.ts](https://github.com/anuma-ai/starter-agent/blob/main/src/commands/chat.ts#L147-L380)
+[src/commands/chat.ts](https://github.com/anuma-ai/starter-agent/blob/main/src/commands/chat.ts#L147-L383)
 
 The REPL supports two slash commands: `/model` opens a fuzzy-search picker (or sets a model by name), and `/exit` quits the session.
 
