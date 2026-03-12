@@ -221,6 +221,9 @@ export const chat = new Command("chat")
         if (picked?.action === "resume") {
           conversationId = picked.conversation.conversationId;
           messages.length = 0;
+          if (opts.system) {
+            messages.push({ role: "system", content: [{ type: "text", text: opts.system }] });
+          }
           const restored = await loadConversation(conversationId);
           messages.push(...restored);
           console.log(chalk.dim(`Switched to "${picked.conversation.title}" (${restored.length} messages)\n`));
