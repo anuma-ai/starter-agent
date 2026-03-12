@@ -167,6 +167,10 @@ export const chat = new Command("chat")
     let conversationId: string | null = null;
     let isNewConversation = false;
 
+    if (opts.system) {
+      messages.push({ role: "system", content: [{ type: "text", text: opts.system }] });
+    }
+
     if (opts.resume) {
       const conv = await getConversationOp(ctx, opts.resume);
       if (!conv) {
@@ -177,10 +181,6 @@ export const chat = new Command("chat")
       const restored = await loadConversation(conversationId);
       messages.push(...restored);
       console.log(chalk.dim(`Resumed "${conv.title}" (${restored.length} messages)\n`));
-    }
-
-    if (opts.system) {
-      messages.push({ role: "system", content: [{ type: "text", text: opts.system }] });
     }
 
     let model = opts.model;
@@ -226,6 +226,14 @@ export const chat = new Command("chat")
           console.log(chalk.dim(`Switched to "${picked.conversation.title}" (${restored.length} messages)\n`));
         } else if (picked?.action === "delete") {
           await deleteConversationOp(ctx, picked.conversation.conversationId);
+          if (conversationId === picked.conversation.conversationId) {
+            conversationId = null;
+            isNewConversation = false;
+            messages.length = 0;
+            if (opts.system) {
+              messages.push({ role: "system", content: [{ type: "text", text: opts.system }] });
+            }
+          }
           console.log(chalk.dim(`Deleted "${picked.conversation.title}"\n`));
         }
         rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -282,6 +290,7 @@ export const chat = new Command("chat")
       if (isNewConversation) {
         isNewConversation = false;
 
+        const targetConversationId = conversationId!;
         postApiV1ChatCompletions({
           baseUrl,
           headers: sdkHeaders(apiKey),
@@ -295,7 +304,7 @@ export const chat = new Command("chat")
         }).then(async (res) => {
           const title = (res.data as any)?.choices?.[0]?.message?.content?.trim();
           if (title) {
-            await updateConversationTitleOp(ctx, conversationId!, title);
+            await updateConversationTitleOp(ctx, targetConversationId, title);
           }
         }).catch(() => {});
       }
