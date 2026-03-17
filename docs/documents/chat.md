@@ -8,28 +8,30 @@ Each user message goes through `runToolLoop`, which manages streaming and multi-
 
 ```ts
         const result = await runToolLoop({
-          messages,
+          messages: messages as any,
           model,
           token: apiKey,
           baseUrl,
-          headers: { "X-API-Key": apiKey },
+          headers: sdkHeaders(apiKey),
           apiType: "completions",
           ...(opts.tools && { tools }),
-          onData: (chunk) => {
+          onData: (chunk: string) => {
             if (firstToken) {
               spinner.stop();
               firstToken = false;
             }
             process.stdout.write(chunk);
           },
-          onError: (err) => {
-            spinner.stop();
-            console.error(chalk.red(`Error: ${err.message}`));
+          onError: () => {
+            if (firstToken) {
+              spinner.stop();
+              firstToken = false;
+            }
           },
         });
 ```
 
-[src/commands/chat.ts](https://github.com/anuma-ai/starter-agent/blob/main/src/commands/chat.ts#L144-L163)
+[src/commands/chat.ts](https://github.com/anuma-ai/starter-agent/blob/main/src/commands/chat.ts#L326-L347)
 
 The key options:
 
@@ -52,19 +54,43 @@ export const chat = new Command("chat")
   .option("--model <name>", "Model to use", "openai/gpt-4o")
   .option("--system <prompt>", "System prompt")
   .option("--no-tools", "Disable client-side tools")
-  .action(async (opts: { model: string; system?: string; apiUrl?: string; tools: boolean }) => {
+  .option("--resume <id>", "Resume a previous conversation by ID")
+  .option("--reset", "Delete all conversations and start fresh")
+  .action(async (opts: { model: string; system?: string; apiUrl?: string; tools: boolean; resume?: string; reset?: boolean }) => {
+    if (opts.reset) {
+      rmSync(DATA_DIR, { recursive: true, force: true });
+      console.log(chalk.dim("All conversations deleted.\n"));
+    }
+
     const baseUrl = opts.apiUrl ?? getApiUrl();
     const apiKey = getApiKey();
+    const ctx = getStorageContext();
     const messages: Message[] = [];
+
+    // Resolve or lazily create a conversation
+    let conversationId: string | null = null;
+    let isNewConversation = false;
 
     if (opts.system) {
       messages.push({ role: "system", content: [{ type: "text", text: opts.system }] });
     }
 
+    if (opts.resume) {
+      const conv = await getConversationOp(ctx, opts.resume);
+      if (!conv) {
+        console.error(chalk.red(`Conversation not found: ${opts.resume}`));
+        process.exit(1);
+      }
+      conversationId = conv.conversationId;
+      const restored = await loadConversation(conversationId);
+      messages.push(...restored);
+      console.log(chalk.dim(`Resumed "${conv.title}" (${restored.length} messages)\n`));
+    }
+
     let model = opts.model;
 
     console.log(
-      chalk.dim(`Model: ${model}. Type /model to switch, /exit to quit.\n`),
+      chalk.dim(`Model: ${model}. Type /new, /history, /model, /exit.\n`),
     );
 
     let rl = createInterface({
@@ -92,6 +118,46 @@ export const chat = new Command("chat")
         break;
       }
 
+      if (input.trim() === "/history") {
+        rl.close();
+        const picked = await pickConversation();
+        if (picked?.action === "resume") {
+          conversationId = picked.conversation.conversationId;
+          messages.length = 0;
+          if (opts.system) {
+            messages.push({ role: "system", content: [{ type: "text", text: opts.system }] });
+          }
+          const restored = await loadConversation(conversationId);
+          messages.push(...restored);
+          console.log(chalk.dim(`Switched to "${picked.conversation.title}" (${restored.length} messages)\n`));
+        } else if (picked?.action === "delete") {
+          await deleteConversationOp(ctx, picked.conversation.conversationId);
+          if (conversationId === picked.conversation.conversationId) {
+            conversationId = null;
+            isNewConversation = false;
+            messages.length = 0;
+            if (opts.system) {
+              messages.push({ role: "system", content: [{ type: "text", text: opts.system }] });
+            }
+          }
+          console.log(chalk.dim(`Deleted "${picked.conversation.title}"\n`));
+        }
+        rl = createInterface({ input: process.stdin, output: process.stdout });
+        closed = false;
+        rl.on("close", () => { closed = true; });
+        continue;
+      }
+      if (input.trim() === "/new") {
+        conversationId = null;
+        isNewConversation = false;
+        messages.length = 0;
+        if (opts.system) {
+          messages.push({ role: "system", content: [{ type: "text", text: opts.system }] });
+        }
+        console.log(chalk.dim("Started new conversation.\n"));
+        continue;
+      }
+
       if (input.trim().startsWith("/model")) {
         const name = input.trim().slice(6).trim();
         if (name) {
@@ -114,48 +180,88 @@ export const chat = new Command("chat")
 
       messages.push({ role: "user", content: [{ type: "text", text: input }] });
 
+      // Lazily create a conversation on first user message.
+      if (!conversationId) {
+        const truncated = input.length > 60 ? input.slice(0, 57) + "…" : input;
+        const conv = await createConversationOp(ctx, undefined, truncated);
+        conversationId = conv.conversationId;
+        isNewConversation = true;
+      }
+
+      // Generate a proper title in the background after the first message.
+      if (isNewConversation) {
+        isNewConversation = false;
+
+        const targetConversationId = conversationId!;
+        postApiV1ChatCompletions({
+          baseUrl,
+          headers: sdkHeaders(apiKey),
+          body: {
+            model,
+            messages: [
+              { role: "system", content: [{ type: "text", text: "Generate a short (max 6 words) conversation title for the user message below. Reply with the title only, no quotes or punctuation." }] },
+              { role: "user", content: [{ type: "text", text: input }] },
+            ],
+          },
+        }).then(async (res) => {
+          const title = (res.data as any)?.choices?.[0]?.message?.content?.trim();
+          if (title) {
+            await updateConversationTitleOp(ctx, targetConversationId, title);
+          }
+        }).catch(() => {});
+      }
+
       process.stdout.write("\n");
       const spinner = ora({ color: "cyan" }).start();
       let firstToken = true;
 
+      // Store user message
+      const userText = input;
+      await createMessageOp(ctx, { conversationId: conversationId!, role: "user", content: userText, model });
+
       try {
         const result = await runToolLoop({
-          messages,
+          messages: messages as any,
           model,
           token: apiKey,
           baseUrl,
-          headers: { "X-API-Key": apiKey },
+          headers: sdkHeaders(apiKey),
           apiType: "completions",
           ...(opts.tools && { tools }),
-          onData: (chunk) => {
+          onData: (chunk: string) => {
             if (firstToken) {
               spinner.stop();
               firstToken = false;
             }
             process.stdout.write(chunk);
           },
-          onError: (err) => {
-            spinner.stop();
-            console.error(chalk.red(`Error: ${err.message}`));
+          onError: () => {
+            if (firstToken) {
+              spinner.stop();
+              firstToken = false;
+            }
           },
         });
 
         if (firstToken) spinner.stop();
 
         if (result.error) {
-          console.error(chalk.red(`Error: ${result.error}`));
+          console.error(chalk.red(`Error: ${String(result.error)}`));
         } else {
           process.stdout.write("\n");
-
-          // Extract assistant text from the response for conversation history
-          const response = result.data as any;
-          const text =
-            response?.choices?.[0]?.message?.content ??
-            response?.output?.find?.((o: any) => o.type === "message")?.content
+          const d = result.data as any;
+          const text: string =
+            d?.choices?.[0]?.message?.content ??
+            d?.output?.find?.((o: any) => o.type === "message")?.content
               ?.find?.((c: any) => c.type === "output_text")?.text ??
             "";
 
-          messages.push({ role: "assistant", content: [{ type: "text", text }] });
+          messages.push({ role: "assistant", content: text });
+
+          // Store assistant message
+          if (text) {
+            await createMessageOp(ctx, { conversationId: conversationId!, role: "assistant", content: text, model });
+          }
 
           if ("autoExecutedToolResults" in result && result.autoExecutedToolResults?.length) {
             for (const tr of result.autoExecutedToolResults) {
@@ -173,7 +279,7 @@ export const chat = new Command("chat")
   });
 ```
 
-[src/commands/chat.ts](https://github.com/anuma-ai/starter-agent/blob/main/src/commands/chat.ts#L70-L196)
+[src/commands/chat.ts](https://github.com/anuma-ai/starter-agent/blob/main/src/commands/chat.ts#L147-L383)
 
 The REPL supports two slash commands: `/model` opens a fuzzy-search picker (or sets a model by name), and `/exit` quits the session.
 

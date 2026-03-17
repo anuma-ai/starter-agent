@@ -12,6 +12,10 @@ When asked to create a PR, use `gh pr create` with:
   - **Breaking Changes**: what will break by upgrading the SDK (if any)
 - Do not include the "🤖 Generated with Claude Code" footer
 
+## Quality
+
+Run `pnpm check` before pushing changes. This runs doc generation, typechecking, and build.
+
 ## Branches
 
 When asked to create a branch, run `git diff` to analyze the changes, then use `git checkout -b` with a semantic branch name based on the diff (e.g., "feat/add-new-hook", "fix/resolve-memory-leak"). Do not ask the user what the branch should be for.

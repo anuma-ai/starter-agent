@@ -10,7 +10,8 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
-    "generate": "node scripts/generate-docs.mjs"
+    "generate": "node scripts/generate-docs.mjs",
+    "check": "pnpm generate && pnpm typecheck && pnpm build"
   },
   "packageManager": "pnpm@10.23.0",
   "type": "module",
@@ -24,6 +25,7 @@
   "dependencies": {
     "@anuma/sdk": "1.0.0-next.20260311124613",
     "@inquirer/search": "^4.1.4",
+    "@nozbe/watermelondb": "^0.28.0",
     "chalk": "^5.6.2",
     "commander": "^14.0.3",
     "marked": "^17.0.4",

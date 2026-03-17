@@ -23,7 +23,7 @@ async function fetchModelIds(baseUrl: string): Promise<string[]> {
 }
 ```
 
-[src/commands/chat.ts](https://github.com/anuma-ai/starter-agent/blob/main/src/commands/chat.ts#L21-L34)
+[src/commands/chat.ts](https://github.com/anuma-ai/starter-agent/blob/main/src/commands/chat.ts#L31-L44)
 
 This uses `getApiV1Models` from `@anuma/sdk/client`, which hits the `/api/v1/models` endpoint.
 
@@ -49,21 +49,23 @@ async function pickModel(current: string, baseUrl: string): Promise<string> {
     return current;
   }
 
-  const selected = await search({
-    message: "Select a model",
-    source: (input) => {
-      const term = (input ?? "").toLowerCase();
-      return modelIds
-        .filter((id) => id.toLowerCase().includes(term))
-        .map((id) => ({ name: id, value: id }));
-    },
-  });
-
-  return selected;
+  try {
+    return await search({
+      message: "Select a model",
+      source: (input) => {
+        const term = (input ?? "").toLowerCase();
+        return modelIds
+          .filter((id) => id.toLowerCase().includes(term))
+          .map((id) => ({ name: id, value: id }));
+      },
+    });
+  } catch {
+    return current;
+  }
 }
 ```
 
-[src/commands/chat.ts](https://github.com/anuma-ai/starter-agent/blob/main/src/commands/chat.ts#L38-L66)
+[src/commands/chat.ts](https://github.com/anuma-ai/starter-agent/blob/main/src/commands/chat.ts#L48-L78)
 
 The picker fetches the full model list, then filters in real time as you type. Select a model to switch to it for the rest of the session.
 
